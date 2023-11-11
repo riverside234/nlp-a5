@@ -96,6 +96,21 @@ class SynthesizerAttention(nn.Module):
         ###       How do these map to the matrices in the handout?
 
         ### START CODE HERE
-        ### END CODE HERE
+        b, t, c = x.size()
+        
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        w1 = self.w1(x).view(b, t, self.n_head, c // self.n_head).transpose(1, 2)
+        w1 = F.relu(w1)
+        v = self.value(x).view(b, t, self.n_head, c // self.n_head).transpose(1, 2)
 
-        raise NotImplementedError
+        att = w1 @ self.w2[:, :t] + self.b2[:t]
+        att = att.masked_fill(self.mask[:, :, :t, :t] == 0, -1e10)  # todo: just use float('-inf') instead?
+        att = F.softmax(att, dim=-1)
+        att = self.attn_drop(att)
+        y = att @ v  # (b, nh, t, t) x (b, nh, t, hs) -> (b, nh, t, hs)
+        y = y.transpose(1, 2).contiguous().view(b, t, c)  # re-assemble all head outputs side by side
+
+        # output projection
+        y = self.resid_drop(self.proj(y))
+        return y
+        ### END CODE HERE
