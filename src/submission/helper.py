@@ -148,8 +148,9 @@ def train(model, writing_params_path, trainer_obj):
     ### START CODE HERE
 
     trainer_obj.train()
+    trainer_obj.config.ckpt_path = writing_params_path
 
-    trainer_obj.save_model(writing_params_path)
+    trainer_obj.save_checkpoint()
 
     ### END CODE HERE
     return
