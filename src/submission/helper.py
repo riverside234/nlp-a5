@@ -18,10 +18,7 @@ def initialize_vanilla_model(mconf):
         setattr(mconf, 'perceiver', False)  # Set it to the default value
 
     # Use CausalSelfAttention as the default attention mechanism
-    #attention_mechanism = CausalSelfAttention
-
-    # Update the GPTConfig with the selected attention mechanism
-    #mconf.attention_mechanism = attention_mechanism
+    #mconf.synthesizer = False
 
     attention_model = GPT(mconf)
 
@@ -36,10 +33,7 @@ def initialize_synthesizer_model(mconf):
     ### START CODE HERE
 
     # Use SynthesizerAttention as the attention mechanism
-    #attention_mechanism = SynthesizerAttention
-
-    # Update the GPTConfig with the selected attention mechanism
-    #mconf.attention_mechanism = attention_mechanism
+    #mconf.synthesizer = True 
 
     attention_model = GPT(mconf)
 
@@ -165,7 +159,7 @@ def train(model, writing_params_path, trainer_obj):
     trainer_obj.train()
 
     trainer_obj.config.ckpt_path = writing_params_path
-    trainer_obj.save_model(writing_params_path)
+    trainer_obj.save_checkpoint(writing_params_path)
 
     ### END CODE HERE
     return
