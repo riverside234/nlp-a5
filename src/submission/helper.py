@@ -12,7 +12,19 @@ def initialize_vanilla_model(mconf):
     ### [part c]: Make some model here
 
     ### START CODE HERE
+    
+    # Dynamically add the 'perceiver' attribute if it doesn't exist
+    if not hasattr(mconf, 'perceiver'):
+        setattr(mconf, 'perceiver', False)  # Set it to the default value
+
+    # Use CausalSelfAttention as the default attention mechanism
+    #attention_mechanism = CausalSelfAttention
+
+    # Update the GPTConfig with the selected attention mechanism
+    #mconf.attention_mechanism = attention_mechanism
+
     attention_model = GPT(mconf)
+
     ### END CODE HERE
     return attention_model
 
@@ -22,6 +34,12 @@ def initialize_synthesizer_model(mconf):
     ### [part g]: Make some other model here
 
     ### START CODE HERE
+
+    # Use SynthesizerAttention as the attention mechanism
+    #attention_mechanism = SynthesizerAttention
+
+    # Update the GPTConfig with the selected attention mechanism
+    #mconf.attention_mechanism = attention_mechanism
 
     attention_model = GPT(mconf)
 
@@ -65,10 +83,6 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
     tconf = None #TrainerConfig object (see trainer.py for more details)
     ### START CODE HERE
 
-    # Create the Trainer object
-    name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
-    trainer_obj = Trainer(model, name_dataset, None, tconf)
-
 
     if reading_params_path is None:
         tconf = TrainerConfig(
@@ -93,8 +107,9 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
             num_workers=4
         )
 
+    # Create the Trainer object
     name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
-    trainer_obj = Trainer(model, name_dataset, None,  tconf)  
+    trainer_obj = Trainer(model, name_dataset, None, tconf)
 
 
     ### END CODE HERE
@@ -148,9 +163,9 @@ def train(model, writing_params_path, trainer_obj):
     ### START CODE HERE
 
     trainer_obj.train()
-    trainer_obj.config.ckpt_path = writing_params_path
 
-    trainer_obj.save_checkpoint()
+    trainer_obj.config.ckpt_path = writing_params_path
+    trainer_obj.save_model(writing_params_path)
 
     ### END CODE HERE
     return

@@ -85,6 +85,7 @@ class SynthesizerAttention(nn.Module):
 
         nn.init.uniform_(self.w2,-0.001,0.001)
 
+
     def forward(self, x, layer_past=None):
 
         ### TODO:
@@ -96,21 +97,42 @@ class SynthesizerAttention(nn.Module):
         ###       How do these map to the matrices in the handout?
 
         ### START CODE HERE
-        b, t, c = x.size()
-        
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        w1 = self.w1(x).view(b, t, self.n_head, c // self.n_head).transpose(1, 2)
-        w1 = F.relu(w1)
-        v = self.value(x).view(b, t, self.n_head, c // self.n_head).transpose(1, 2)
 
-        att = w1 @ self.w2[:, :t] + self.b2[:t]
-        att = att.masked_fill(self.mask[:, :, :t, :t] == 0, -1e10)  # todo: just use float('-inf') instead?
+        B, T, C = x.size()
+
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        w1 = self.w1(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs) 
+        # print("a", a.shape)
+
+        w2 = self.w2[:, :T] # (hs, T)
+        # print("b", b.shape)
+
+        b2 = self.b2[:T] # (T) 
+        # print("b2", b2.shape)
+
+        v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        # print(v.shape)
+
+        # Synthesizer Attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        att = (F.relu(w1) @ w2 + b2)
+        # print(att.shape)
+
+        # Mask out the future
+        att = att.masked_fill(self.mask[:, :, :T, :T] == 0, -1e10) # todo: just use float('-inf') instead?
         att = F.softmax(att, dim=-1)
+        # print(att.shape)
+
         att = self.attn_drop(att)
-        y = att @ v  # (b, nh, t, t) x (b, nh, t, hs) -> (b, nh, t, hs)
-        y = y.transpose(1, 2).contiguous().view(b, t, c)  # re-assemble all head outputs side by side
+        # print(att.shape)
+        # print(v.shape)
+
+        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
         # output projection
         y = self.resid_drop(self.proj(y))
         return y
+        
         ### END CODE HERE
+
+
