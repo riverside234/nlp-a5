@@ -17,9 +17,6 @@ def initialize_vanilla_model(mconf):
     if not hasattr(mconf, 'perceiver'):
         setattr(mconf, 'perceiver', False)  # Set it to the default value
 
-    # Use CausalSelfAttention as the default attention mechanism
-    #mconf.synthesizer = False
-
     attention_model = GPT(mconf)
 
     ### END CODE HERE
@@ -32,8 +29,9 @@ def initialize_synthesizer_model(mconf):
 
     ### START CODE HERE
 
-    # Use SynthesizerAttention as the attention mechanism
-    #mconf.synthesizer = True 
+    # Dynamically add the 'perceiver' attribute if it doesn't exist
+    if not hasattr(mconf, 'perceiver'):
+        setattr(mconf, 'perceiver', False)  # Set it to the default value
 
     attention_model = GPT(mconf)
 
