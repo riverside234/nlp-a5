@@ -12,33 +12,24 @@ def initialize_vanilla_model(mconf):
     ### [part c]: Make some model here
 
     ### START CODE HERE
-    
-    # Dynamically add the 'perceiver' attribute if it doesn't exist
-    if not hasattr(mconf, 'perceiver'):
-        setattr(mconf, 'perceiver', False)  # Set it to the default value
-
     attention_model = GPT(mconf)
-
     ### END CODE HERE
     return attention_model
 
-def initialize_synthesizer_model(mconf):
+def initialize_perceiver_model(mconf, bottleneck_dim=32):
     attention_model = None
     ### TODO
     ### [part g]: Make some other model here
 
     ### START CODE HERE
-
-    # Dynamically add the 'perceiver' attribute if it doesn't exist
-    if not hasattr(mconf, 'perceiver'):
-        setattr(mconf, 'perceiver', False)  # Set it to the default value
-
+    
+    mconf.perceiver = True
+    mconf.bottleneck_dim = bottleneck_dim
     attention_model = GPT(mconf)
-
     ### END CODE HERE
     return attention_model
 
-def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_size, model):
+def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_size, model, finetune_lr=6e-4, writer=None):
     ### TODO:
     ### [part c] [part f]:
     ### - Given:
@@ -75,39 +66,60 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
     tconf = None #TrainerConfig object (see trainer.py for more details)
     ### START CODE HERE
 
-
-    if reading_params_path is None:
-        tconf = TrainerConfig(
-            max_epochs=75, 
-            batch_size=256, 
-            learning_rate=6e-4,
-            lr_decay=True, 
-            warmup_tokens=512*20, 
-            final_tokens=200*len(pretrain_dataset)*block_size,
-            num_workers=4
+    # Define hyperparameters
+    max_epochs = 75 if reading_params_path is None else 10  # Adjust based on whether pretraining is used
+    batch_size = 256
+    learning_rate = finetune_lr
+    betas = (0.9, 0.95)
+    grad_norm_clip = 1.0
+    weight_decay = 0.1
+    lr_decay = True
+    warmup_tokens = 512 * 20
+    final_tokens = 200 * len(pretrain_dataset) * block_size
+    num_workers = 4
+        
+    # Set up TrainerConfig
+    tconf = TrainerConfig(
+            max_epochs=max_epochs,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            betas=betas,
+            grad_norm_clip=grad_norm_clip,
+            weight_decay=weight_decay,
+            lr_decay=lr_decay,
+            warmup_tokens=warmup_tokens,
+            final_tokens=final_tokens,
+            ckpt_path=None,
+            num_workers=num_workers,
         )
+
+    # Print debug information
+    print(f"Reading pretraining parameters from: {reading_params_path}")
+
+    # Check if reading_params_path is specified
+    if reading_params_path is not None:
+        try:
+            # Load pretrained model parameters
+            model.load_state_dict(torch.load(reading_params_path, map_location=torch.device('cpu')))
+        except FileNotFoundError:
+             # Handle the case where the file does not exist
+            print(f"Error: The file {reading_params_path} does not exist.")
+            return tconf, trainer_obj
+
+        # Set up NameDataset and Trainer
+        print(type(pretrain_dataset))
+
+        name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
+        trainer_obj = Trainer(model, name_dataset, None, tconf)
+
     else:
-        model.load_state_dict(torch.load(reading_params_path, map_location=torch.device('cpu')))
-
-        tconf = TrainerConfig(
-            max_epochs=10, 
-            batch_size=256, 
-            learning_rate=6e-4,
-            lr_decay=True, 
-            warmup_tokens=512*20, 
-            final_tokens=200*len(pretrain_dataset)*block_size,
-            num_workers=4
-        )
-
-    # Create the Trainer object
-    name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
-    trainer_obj = Trainer(model, name_dataset, None, tconf)
-
+            # Handle the case where the file does not exist
+            print(f"Warning: The file {reading_params_path} does not exist. Training from scratch.")
 
     ### END CODE HERE
     return tconf, trainer_obj
 
-def pretrain(pretrain_dataset, block_size, model):
+def pretrain(pretrain_dataset, block_size, model, pretrain_lr=6e-3, writer=None):
     ### TODO:
     ### [part f]:
     ### - Given:
@@ -128,18 +140,23 @@ def pretrain(pretrain_dataset, block_size, model):
     tconf = None #TrainerConfig object (see trainer.py for more details)
 
     ### START CODE HERE
-
     tconf = TrainerConfig(
-        max_epochs=650, 
-        batch_size=128, 
-        learning_rate=6e-3,
-        lr_decay=True, 
-        warmup_tokens=512*20, 
+        max_epochs=650,
+        batch_size=128,
+        learning_rate=pretrain_lr,
+        lr_decay=True,
+        warmup_tokens=512*20,
         final_tokens=200*len(pretrain_dataset)*block_size,
         num_workers=4
     )
 
-    trainer_obj = Trainer(model, pretrain_dataset, None, tconf)
+    print(type(pretrain_dataset))
+
+    # Using CharCorruptionDataset instead of NameDataset
+    char_dataset = pretrain_dataset
+    
+    trainer_obj = Trainer(model, char_dataset, None, tconf)
+
 
     ### END CODE HERE
     return tconf, trainer_obj
@@ -153,7 +170,6 @@ def train(model, writing_params_path, trainer_obj):
     ### Note: trainer_obj is of type Trainer (see trainer.py for more details)
 
     ### START CODE HERE
-
     trainer_obj.train()
 
     trainer_obj.config.ckpt_path = writing_params_path

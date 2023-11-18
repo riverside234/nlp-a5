@@ -34,6 +34,7 @@ class TrainerConfig:
     # checkpoint settings
     ckpt_path = None
     num_workers = 0 # for DataLoader
+    writer = None
 
     def __init__(self, **kwargs):
         for k,v in kwargs.items():
@@ -66,6 +67,8 @@ class Trainer:
     def train(self):
         model, config = self.model, self.config
 
+        print("Training configuration:", config)
+
         # create the optimizer
         no_decay = ["bias", "LayerNorm.weight"]
         params_decay = [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)]
@@ -75,8 +78,9 @@ class Trainer:
             {"params": params_nodecay, "weight_decay": 0.0},
         ]
         optimizer = optim.AdamW(optim_groups, lr=config.learning_rate, betas=config.betas)
-
+        step = 0
         def run_epoch(split):
+            nonlocal step
             is_train = split == 'train'
             model.train(is_train)
             data = self.train_dataset if is_train else self.test_dataset
@@ -122,7 +126,12 @@ class Trainer:
 
                     # report progress
                     pbar.set_description(f"epoch {epoch+1} iter {it}: train loss {loss.item():.5f}. lr {lr:e}")
+                    
+                    if config.writer is not None:
+                        config.writer.add_scalar('train/loss',  loss.item(), step)
+                        config.writer.add_scalar('train/lr', lr, step)
 
+                step += 1
             if not is_train:
                 logger.info("test loss: %f", np.mean(losses))
 
