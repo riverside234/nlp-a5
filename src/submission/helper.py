@@ -66,55 +66,38 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
     tconf = None #TrainerConfig object (see trainer.py for more details)
     ### START CODE HERE
 
-    # Define hyperparameters
-    max_epochs = 75 if reading_params_path is None else 10  # Adjust based on whether pretraining is used
-    batch_size = 256
-    learning_rate = finetune_lr
-    betas = (0.9, 0.95)
-    grad_norm_clip = 1.0
-    weight_decay = 0.1
-    lr_decay = True
-    warmup_tokens = 512 * 20
-    final_tokens = 200 * len(pretrain_dataset) * block_size
-    num_workers = 4
-        
-    # Set up TrainerConfig
-    tconf = TrainerConfig(
-            max_epochs=max_epochs,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            betas=betas,
-            grad_norm_clip=grad_norm_clip,
-            weight_decay=weight_decay,
-            lr_decay=lr_decay,
-            warmup_tokens=warmup_tokens,
-            final_tokens=final_tokens,
-            ckpt_path=None,
-            num_workers=num_workers,
-        )
-
     # Print debug information
     print(f"Reading pretraining parameters from: {reading_params_path}")
-
-    # Check if reading_params_path is specified
-    if reading_params_path is not None:
-        try:
-            # Load pretrained model parameters
-            model.load_state_dict(torch.load(reading_params_path, map_location=torch.device('cpu')))
-        except FileNotFoundError:
-             # Handle the case where the file does not exist
-            print(f"Error: The file {reading_params_path} does not exist.")
-            return tconf, trainer_obj
-
-        # Set up NameDataset and Trainer
-        print(type(pretrain_dataset))
-
-        name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
-        trainer_obj = Trainer(model, name_dataset, None, tconf)
-
+    
+    if reading_params_path is None:
+        tconf = TrainerConfig(
+            max_epochs=75, 
+            batch_size=256, 
+            learning_rate=6e-4,
+            lr_decay=True, 
+            warmup_tokens=512*20, 
+            final_tokens=200*len(pretrain_dataset)*block_size,
+            num_workers=4
+        )
     else:
-            # Handle the case where the file does not exist
-            print(f"Warning: The file {reading_params_path} does not exist. Training from scratch.")
+        model.load_state_dict(torch.load(reading_params_path, map_location=torch.device('cpu')))
+
+        tconf = TrainerConfig(
+            max_epochs=10, 
+            batch_size=256, 
+            learning_rate=6e-4,
+            lr_decay=True, 
+            warmup_tokens=512*20, 
+            final_tokens=200*len(pretrain_dataset)*block_size,
+            num_workers=4
+        )
+
+    # Set up NameDataset and Trainer
+    print(type(pretrain_dataset))
+
+    # Create the Trainer object
+    name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
+    trainer_obj = Trainer(model, name_dataset, None, tconf)
 
     ### END CODE HERE
     return tconf, trainer_obj
