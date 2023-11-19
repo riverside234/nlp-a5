@@ -22,7 +22,6 @@ def initialize_perceiver_model(mconf, bottleneck_dim=32):
     ### [part g]: Make some other model here
 
     ### START CODE HERE
-    
     mconf.perceiver = True
     mconf.bottleneck_dim = bottleneck_dim
     attention_model = GPT(mconf)
@@ -68,7 +67,7 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
 
     # Print debug information
     print(f"Reading pretraining parameters from: {reading_params_path}")
-    
+
     if reading_params_path is None:
         tconf = TrainerConfig(
             max_epochs=75, 
@@ -124,7 +123,7 @@ def pretrain(pretrain_dataset, block_size, model, pretrain_lr=6e-3, writer=None)
 
     ### START CODE HERE
     tconf = TrainerConfig(
-        max_epochs=650,
+        max_epochs=650, 
         batch_size=128,
         learning_rate=pretrain_lr,
         lr_decay=True,
