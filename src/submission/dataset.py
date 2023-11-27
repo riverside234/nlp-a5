@@ -175,29 +175,26 @@ class CharCorruptionDataset(Dataset):
         ### [part e]: see spec above
 
         ### START CODE HERE
-        document =self.data[idx]
-        n = random.randint(4, int(self.block_size*7/8))
-        
-        truncated_document = document[:n] + (4 - len(document)) * self.PAD_CHAR
-        
-        actual_length = len(truncated_document)
-        
-        #[prefix] [masked_content] [suffix]
-        start_idx = random.randint(1, actual_length-2)
-        end_idx = random.randint(start_idx+1, actual_length-1)
-        prefix = truncated_document[:start_idx]
-        masked_content = truncated_document[start_idx:end_idx]
-        suffix = truncated_document[end_idx:]
-        
-        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content
-        masked_string += self.PAD_CHAR * (self.block_size - len(masked_string))
-        output_str = masked_string[1:]
-        input_str = masked_string[:-1]
-        x = torch.tensor([self.stoi[c] for c in input_str], dtype=torch.long)
-        y = torch.tensor([self.stoi[c] for c in output_str], dtype=torch.long)
+        doc = self.data[idx]
+        truncated_len = int(torch.randint(low=4, high=int(self.block_size * 7/8) + 1, size=(1,))[0]) #random.randint(4, int(self.block_size*7/8))
+        truncated_doc = doc[:truncated_len]
 
-        return x, y
+        #masked_content_len = int(random.normalvariate(truncated_len/4, 1))
+        masked_content_len = int(torch.randint(low=1, high=2*int(truncated_len/4), size=(1,))[0])
+        masked_content_index = int(torch.randint(low=0, high=truncated_len - int(truncated_len/4) + 1, size=(1,))[0])
         
+        prefix = truncated_doc[:masked_content_index]
+        suffix = truncated_doc[masked_content_index + masked_content_len:]
+        masked_content = truncated_doc[masked_content_index : masked_content_index + masked_content_len]
+
+        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content + self.PAD_CHAR*(self.block_size - len(prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content) + 1)
+
+        x = masked_string[:-1]
+        y = masked_string[1:]
+        
+        x = torch.tensor([self.stoi[c] for c in x], dtype=torch.long)
+        y = torch.tensor([self.stoi[c] for c in y], dtype=torch.long)
+        return x, y
         ### END CODE HERE
 
 """
