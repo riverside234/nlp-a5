@@ -14,7 +14,7 @@ def initialize_vanilla_model(mconf):
     ### START CODE HERE
     attention_model = GPT(mconf)
     ### END CODE HERE
-    return attention_model
+    return attention_model 
 
 def initialize_perceiver_model(mconf, bottleneck_dim=32):
     attention_model = None
@@ -22,9 +22,7 @@ def initialize_perceiver_model(mconf, bottleneck_dim=32):
     ### [part g]: Make some other model here
 
     ### START CODE HERE
-    mconf.perceiver = True
-    mconf.bottleneck_dim = bottleneck_dim
-    attention_model = GPT(mconf)
+
     ### END CODE HERE
     return attention_model
 
@@ -60,43 +58,28 @@ def finetune(reading_params_path, finetune_corpus_path, pretrain_dataset, block_
     ###
     ###
     ### Note: Please use torch.load(reading_params_path, map_location=torch.device('cpu')) to load pretrained model 
-
+    
     trainer_obj = None #Trainer object (see trainer.py for more details)
     tconf = None #TrainerConfig object (see trainer.py for more details)
     ### START CODE HERE
 
-    # Print debug information
-    print(f"Reading pretraining parameters from: {reading_params_path}")
+    ### read the finetune text file
 
-    if reading_params_path is None:
-        tconf = TrainerConfig(
-            max_epochs=75, 
-            batch_size=256, 
-            learning_rate=6e-4,
-            lr_decay=True, 
-            warmup_tokens=512*20, 
-            final_tokens=200*len(pretrain_dataset)*block_size,
-            num_workers=4
-        )
+    text = open(finetune_corpus_path, 'r').read()
+    finetune_dataSet = NameDataset(text, pretrain_dataset)
+    
+    ### finetune model
+
+    if reading_params_path == None:
+        tconf = TrainerConfig(max_epochs=75, batch_size=256, learning_rate=6e-4,
+                      lr_decay=True, warmup_tokens=512*20, final_tokens=200*len(pretrain_dataset)*block_size,
+                      num_workers=4)
+        trainer_obj = Trainer(model, finetune_dataSet, None, tconf)
     else:
-        model.load_state_dict(torch.load(reading_params_path, map_location=torch.device('cpu')))
-
-        tconf = TrainerConfig(
-            max_epochs=10, 
-            batch_size=256, 
-            learning_rate=6e-4,
-            lr_decay=True, 
-            warmup_tokens=512*20, 
-            final_tokens=200*len(pretrain_dataset)*block_size,
-            num_workers=4
-        )
-
-    # Set up NameDataset and Trainer
-    print(type(pretrain_dataset))
-
-    # Create the Trainer object
-    name_dataset = NameDataset(open(finetune_corpus_path, encoding='utf-8').read(), pretrain_dataset)
-    trainer_obj = Trainer(model, name_dataset, None, tconf)
+        tconf = TrainerConfig(max_epochs=10, batch_size=256, learning_rate=6e-4,
+                      lr_decay=True, warmup_tokens=512*20, final_tokens=200*len(pretrain_dataset)*block_size,
+                      num_workers=4)
+        trainer_obj = Trainer(model, finetune_dataSet, torch.load(reading_params_path, map_location=torch.device('cpu')), tconf)
 
     ### END CODE HERE
     return tconf, trainer_obj
@@ -122,22 +105,6 @@ def pretrain(pretrain_dataset, block_size, model, pretrain_lr=6e-3, writer=None)
     tconf = None #TrainerConfig object (see trainer.py for more details)
 
     ### START CODE HERE
-    tconf = TrainerConfig(
-        max_epochs=650, 
-        batch_size=128,
-        learning_rate=pretrain_lr,
-        lr_decay=True,
-        warmup_tokens=512*20,
-        final_tokens=200*len(pretrain_dataset)*block_size,
-        num_workers=4
-    )
-
-    print(type(pretrain_dataset))
-
-    # Using CharCorruptionDataset instead of NameDataset
-    char_dataset = pretrain_dataset
-    
-    trainer_obj = Trainer(model, char_dataset, None, tconf)
 
 
     ### END CODE HERE
@@ -152,10 +119,9 @@ def train(model, writing_params_path, trainer_obj):
     ### Note: trainer_obj is of type Trainer (see trainer.py for more details)
 
     ### START CODE HERE
+
     trainer_obj.train()
-
-    trainer_obj.config.ckpt_path = writing_params_path
-    trainer_obj.save_checkpoint()
-
+    torch.save(model.state_dict(), writing_params_path)
+    
     ### END CODE HERE
     return
