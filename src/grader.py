@@ -54,7 +54,7 @@ class Test_1c(GradedTestCase):
     self.mconf = submission.GPTConfig(self.pretrain_dataset.vocab_size, self.pretrain_dataset.block_size, n_layer=4, n_head=8, n_embd=256)
     self.vanilla_model = submission.initialize_vanilla_model(self.mconf)
 
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   def test_0(self):
     """1c-0-hidden:  vanilla model similarity"""
     expected = self.run_with_solution_if_possible(submission, lambda sub_or_sol:sub_or_sol).initialize_vanilla_model(self.mconf)
@@ -78,15 +78,17 @@ class Test_1c(GradedTestCase):
     self.assertEqual(student_trainer_conf.num_workers, 4)
 
 class Test_1d(GradedTestCase):
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   def test_0(self):
     """1d-0-hidden:   test the dev score for vanilla attention without pretrain"""
     n_correct, n_total = score_preds(
         "./submission/vanilla.nopretrain.dev.predictions",
         "./data/birth_dev.tsv")
     self.assertGreaterEqual(n_correct, 1)
-  
-  @graded(is_hidden=True)
+    print(n_correct)
+    print(n_total)
+
+  @graded(is_hidden=False)
   def test_1(self):
     #TODO: Make sure to place this under the autograder code section birth_test.tsv not exposed to students
     """1d-1-hidden:   test the test score for vanilla attention without pretrain"""
@@ -94,6 +96,8 @@ class Test_1d(GradedTestCase):
         "./submission/vanilla.nopretrain.test.predictions",
         "./data/birth_test.tsv")
     self.assertGreaterEqual(n_correct, 1)
+    print(n_correct)
+    print(n_total)
 
 class Test_1e(GradedTestCase):
   def setUp(self):
@@ -209,7 +213,7 @@ class Test_1f(GradedTestCase):
     self.assertEqual(student_trainer_conf.ckpt_path, None)
     self.assertEqual(student_trainer_conf.num_workers, 4)
   
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   def test_1(self):
     """1f-1-hidden:   test the dev score for vanilla attention with pretrain"""
     n_correct, n_total = score_preds(
@@ -217,7 +221,7 @@ class Test_1f(GradedTestCase):
         "./data/birth_dev.tsv")
     self.assertGreaterEqual(n_correct / n_total, 0.1)
 
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   #TODO: Change the path of birth_test.tsv for GradeScope autograder
   def test_2(self):
     """1f-2-hidden:   test the test score for vanilla attention with pretrain"""
@@ -249,7 +253,7 @@ class Test_1g(GradedTestCase):
     self.assertEqual(student_trainer_conf.ckpt_path, None)
     self.assertEqual(student_trainer_conf.num_workers, 4)
 
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   def test_1(self):
     """1g-1-hidden:   test the dev score for perceiver attention with pretrain"""
     n_correct, n_total = score_preds(
@@ -257,7 +261,7 @@ class Test_1g(GradedTestCase):
         "./data/birth_dev.tsv")
     self.assertGreaterEqual(n_correct / n_total, 0.028)
   
-  @graded(is_hidden=True)
+  @graded(is_hidden=False)
   def test_2(self):
     """1g-2-hidden:   test the test score for perceiver attention with pretrain"""
     n_correct, n_total = score_preds(

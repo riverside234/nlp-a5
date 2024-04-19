@@ -175,26 +175,28 @@ class CharCorruptionDataset(Dataset):
         ### [part e]: see spec above
 
         ### START CODE HERE
-        doc = self.data[idx]
-        truncated_len = int(torch.randint(low=4, high=int(self.block_size * 7/8) + 1, size=(1,))[0]) #random.randint(4, int(self.block_size*7/8))
-        truncated_doc = doc[:truncated_len]
 
-        #masked_content_len = int(random.normalvariate(truncated_len/4, 1))
-        masked_content_len = int(torch.randint(low=1, high=2*int(truncated_len/4), size=(1,))[0])
-        masked_content_index = int(torch.randint(low=0, high=truncated_len - int(truncated_len/4) + 1, size=(1,))[0])
-        
-        prefix = truncated_doc[:masked_content_index]
-        suffix = truncated_doc[masked_content_index + masked_content_len:]
-        masked_content = truncated_doc[masked_content_index : masked_content_index + masked_content_len]
+        retrieve_element = self.data[idx] 
 
-        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content + self.PAD_CHAR*(self.block_size - len(prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content) + 1)
+        truncate_length = int(((self.block_size*7/8) - 4) * torch.rand(1)[0] + 4)  
+        retrieve_element = retrieve_element[:truncate_length]
+
+        start_indx = int(((truncate_length-3) * torch.rand(1)[0])) 
+        end_indx = int(start_indx + min(((truncate_length+3)/2) * torch.rand(1)[0], truncate_length-start_indx-2)) 
+        prefix = retrieve_element[:start_indx]
+        masked_content = retrieve_element[start_indx:end_indx]
+        suffix = retrieve_element[end_indx:]
+
+        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content + self.MASK_CHAR + self.PAD_CHAR*(self.block_size - len(prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content + self.MASK_CHAR))
 
         x = masked_string[:-1]
         y = masked_string[1:]
-        
+
         x = torch.tensor([self.stoi[c] for c in x], dtype=torch.long)
         y = torch.tensor([self.stoi[c] for c in y], dtype=torch.long)
+
         return x, y
+        
         ### END CODE HERE
 
 """
